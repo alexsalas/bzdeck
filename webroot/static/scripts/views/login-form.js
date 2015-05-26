@@ -9,22 +9,11 @@
 
 BzDeck.views.LoginForm = function LoginFormView () {
   // TODO: Users will be able to choose an instance on the sign-in form; Hardcode the host for now
-  let params = new URLSearchParams(location.search.substr(1)),
-      host = params.get('server') === 'dev' ? 'mozilla-dev' : 'mozilla';
+  let params = new URLSearchParams(location.search.substr(1));
 
-  this.$form = document.querySelector('#app-login form');
-  this.$email = this.$form.querySelector('[name="email"]');
-  this.$apikey = this.$form.querySelector('[name="apikey"]');
-  this.$button = this.$form.querySelector('[role="button"]');
+  this.host = params.get('server') === 'dev' ? 'mozilla-dev' : 'mozilla';
+  this.$form = document.querySelector('#app-login [role="form"]');
   this.$statusbar = document.querySelector('#app-login [role="status"]');
-
-  this.$form.addEventListener('submit', event => {
-    this.trigger(':Submit', { host, 'email': this.$email.value, 'api_key': this.$apikey.value });
-    this.$email.disabled = this.$apikey.disabled = this.$button.disabled = true;
-    event.preventDefault();
-
-    return false;
-  });
 
   this.on('SessionController:StatusUpdate', data => {
     this.show_status(data.message);
@@ -41,12 +30,14 @@ BzDeck.views.LoginForm = function LoginFormView () {
 
   this.on('SessionController:Error', data => {
     this.show_status(data.message);
-    this.$email.disabled = this.$apikey.disabled = this.$button.disabled = false;
   }, true);
 
   this.on('SessionController:Logout', data => {
     this.show();
   }, true);
+
+  this.activate_bugzilla_auth();
+  this.activate_qrcode_auth();
 };
 
 BzDeck.views.LoginForm.prototype = Object.create(BzDeck.views.Base.prototype);
@@ -54,12 +45,9 @@ BzDeck.views.LoginForm.prototype.constructor = BzDeck.views.LoginForm;
 
 BzDeck.views.LoginForm.prototype.show = function (firstrun = true) {
   this.$form.setAttribute('aria-hidden', 'false');
-  this.$email.disabled = this.$apikey.disabled = this.$button.disabled = false;
-  this.$email.focus();
+  this.$bzauth_button.focus();
 
-  if (!firstrun) {
-    return true;
-  }
+  return !firstrun;
 };
 
 BzDeck.views.LoginForm.prototype.hide = function () {
@@ -72,4 +60,62 @@ BzDeck.views.LoginForm.prototype.hide_intro = function () {
 
 BzDeck.views.LoginForm.prototype.show_status = function (message) {
   this.$statusbar.textContent = message;
+};
+
+BzDeck.views.LoginForm.prototype.activate_bugzilla_auth = function () {
+  this.$bzauth_button = this.$form.querySelector('[data-id="bugzilla-auth"]');
+
+  this.$bzauth_button.addEventListener('click', event => {
+    let callback = `${location.origin}/integration/bugzilla-auth-callback/`,
+        auth_url = `${BzDeck.config.servers[this.host].url}/auth.cgi?callback=${callback}&description=BzDeck`;
+
+    this.trigger(':LoginRequested', { 'host': this.host });
+
+    // Take the user to the Bugzilla auth page
+    // http://bugzilla.readthedocs.org/en/latest/integrating/auth-delegation.html
+    window.open(auth_url, 'bugzilla-auth');
+  });
+};
+
+BzDeck.views.LoginForm.prototype.activate_qrcode_auth = function () {
+  this.$qrauth_button = this.$form.querySelector('[data-id="qrcode-auth"]');
+  this.$qrauth_button.addEventListener('click', event => {
+    let $overlay = document.querySelector('#qrcode-auth-overlay');
+
+    let decode = () => {
+      let qrcode = $overlay.querySelector('iframe').contentWindow.qrcode,
+          $canvas = document.createElement('canvas'),
+          context = $canvas.getContext('2d'),
+          width = $canvas.width = $video.videoWidth,
+          height = $canvas.height = $video.videoHeight;
+
+      context.drawImage($video, 0, 0, width, height);
+      qrcode.callback = result => this.trigger(':QRCodeDecoded', { 'host': this.host, result });
+      qrcode.decode($canvas.toDataURL('image/png'));
+    };
+
+    let hide_overlay = () => {
+      this.$qrauth_button.focus();
+      $overlay.setAttribute('aria-hidden', 'true');
+      $video.pause();
+      stream.stop();
+    };
+
+    if ($overlay) {
+      $overlay.removeAttribute('aria-hidden');
+    } else {
+      $overlay = document.body.appendChild(this.get_fragment('qrcode-auth-overlay-template').firstElementChild);
+      $overlay.querySelector('video').addEventListener('click', event => { decode(); hide_overlay(); });
+      $overlay.querySelector('[role="button"][data-id="cancel"]').addEventListener('click', event => hide_overlay());
+    }
+
+    let $video = $overlay.querySelector('video'),
+        stream;
+
+    navigator.mediaDevices.getUserMedia({ 'audio': false, 'video': true }).then(input => {
+      stream = input;
+      $video.src = URL.createObjectURL(stream);
+      $video.play();
+    });
+  });
 };

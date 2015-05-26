@@ -36,12 +36,11 @@ BzDeck.views.TimelineCommentForm = function TimelineCommentFormView (bug, timeli
   this.changes = new Map();
 
   Object.defineProperties(this, {
-    'has_api_key': { 'enumerable': true, 'get': () => !!BzDeck.models.account.data.api_key },
     'has_comment': { 'enumerable': true, 'get': () => !!this.$textbox.value.match(/\S/) },
     'has_attachments': { 'enumerable': true, 'get': () => !!this.attachments.length },
     'has_changes': { 'enumerable': true, 'get': () => !!this.changes.size },
     'has_errors': { 'enumerable': true, 'get': () => !!this.find_errors().size },
-    'can_submit': { 'enumerable': true, 'get': () => this.has_api_key && !this.has_errors &&
+    'can_submit': { 'enumerable': true, 'get': () => !this.has_errors &&
                                                       (this.has_comment || this.has_attachments || this.has_changes) },
   });
 
@@ -115,18 +114,6 @@ BzDeck.views.TimelineCommentForm = function TimelineCommentFormView (bug, timeli
 
   this.$submit.addEventListener(click_event_type, event => this.submit());
 
-  if (!this.has_api_key) {
-    this.$status.innerHTML = '<strong>Provide your API Key</strong> to post.';
-    this.$status.querySelector('strong').addEventListener(click_event_type, event =>
-      BzDeck.router.navigate('/settings', { 'tab_id': 'account' }));
-
-    this.on('SettingsPageController:APIKeyVerified', data => {
-      this.$status.textContent = '';
-      this.$submit.setAttribute('aria-disabled', !this.can_submit);
-      this.prep_editor_tabpanels();
-    }, true);
-  }
-
   this.prep_editor_tabpanels();
 };
 
@@ -139,7 +126,7 @@ BzDeck.views.TimelineCommentForm.prototype.oninput = function () {
   this.$submit.setAttribute('aria-disabled', !this.can_submit);
   this.$preview_tab.setAttribute('aria-disabled', !this.has_comment);
 
-  if (this.has_api_key && this.$status.textContent) {
+  if (this.$status.textContent) {
     this.$status.textContent = '';
   }
 };

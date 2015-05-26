@@ -7,7 +7,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-BzDeck.views.SettingsPage = function SettingsPageView (tab_id, api_key, api_key_link, prefs) {
+BzDeck.views.SettingsPage = function SettingsPageView (tab_id, prefs) {
   // Activate tabs
   this.$$tablist = new this.widget.TabList(document.querySelector('#settings-tablist'));
 
@@ -15,54 +15,18 @@ BzDeck.views.SettingsPage = function SettingsPageView (tab_id, api_key, api_key_
     this.$$tablist.view.selected = this.$$tablist.view.$focused = document.querySelector(`#settings-tab-${tab_id}`);
   }
 
-  // Activate the API Key input widget
-  this.activate_api_key_input(api_key, api_key_link);
-
   // Currently the radiogroup/radio widget is not data driven.
   // A modern preference system is needed.
   for (let [name, value] of prefs) {
     this.activate_radiogroup(name, value);
   }
+
+  // Show the QR code for mobile
+  this.show_qrcode();
 };
 
 BzDeck.views.SettingsPage.prototype = Object.create(BzDeck.views.Base.prototype);
 BzDeck.views.SettingsPage.prototype.constructor = BzDeck.views.SettingsPage;
-
-BzDeck.views.SettingsPage.prototype.activate_api_key_input = function (api_key, api_key_link) {
-  let $input = document.querySelector('#settings-tabpanel-account input'),
-      $output = document.querySelector('#settings-tabpanel-account output'),
-      $link = document.querySelector('#settings-tabpanel-account a');
-
-  if (api_key) {
-    $input.value = api_key;
-    $output.value = 'Verified'; // l10n
-  }
-
-  $link.href = api_key_link;
-
-  $input.addEventListener('input', event => {
-    if ($input.value.length === $input.maxLength) {
-      this.trigger(':APIKeyProvided', { 'api_key': $input.value })
-      $output.value = 'Verifying...'; // l10n
-    } else {
-      $output.value = '';
-    }
-  });
-
-  this.on('C:APIKeyVerified', data => {
-    $input.setAttribute('aria-invalid', 'false');
-    $output.value = 'Verified'; // l10n
-  });
-
-  this.on('C:APIKeyInvalid', data => {
-    $input.setAttribute('aria-invalid', 'true');
-    $output.value = 'Invalid, try again'; // l10n
-  });
-
-  this.on('C:APIKeyVerificationError', data => {
-    BzDeck.views.statusbar.show(data.error.message);
-  });
-};
 
 BzDeck.views.SettingsPage.prototype.activate_radiogroup = function (name, _value) {
   let $root = document.documentElement,
@@ -83,5 +47,21 @@ BzDeck.views.SettingsPage.prototype.activate_radiogroup = function (name, _value
     if ($root.hasAttribute(attr)) {
       $root.setAttribute(attr, String(value));
     }
+  });
+};
+
+BzDeck.views.SettingsPage.prototype.show_qrcode = function () {
+  let $outer = document.querySelector('#settings-qrcode-outer');
+
+  // Because the QRCode library doesn't support the strict mode, load the script in an iframe
+  $outer.querySelector('iframe').addEventListener('load', event => {
+    let QRCode = event.target.contentWindow.QRCode;
+
+    new QRCode($outer.querySelector('div'), {
+      'text': `${BzDeck.models.account.data.name}|${BzDeck.models.account.data.api_key}`,
+      'width': 256,
+      'height': 256,
+      'colorLight': 'transparent',
+    });
   });
 };

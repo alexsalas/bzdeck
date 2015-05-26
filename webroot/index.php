@@ -120,10 +120,12 @@
             <div id="settings-tabpanel-account" tabindex="0" role="tabpanel" aria-hidden="false" aria-labelledby="settings-tab-account">
               <section>
                 <h3>Account</h3>
-                <section>
-                  <h4>Bugzilla API Key</h4>
-                  <div><input maxlength="40" role="textbox"><output role="status"></output></div>
-                  <p>Provide your <a>API Key</a> if you'd make changes to bugs. It will be saved in your local browser storage, used only for Bugzilla user authentication when needed, and never sent to the BzDeck server nor any other third parties.</p>
+                <section id="settings-qrcode-outer">
+                  <h4>BzDeck on mobile</h4>
+                  <p>Do you know BzDeck works with Android and Firefox&nbsp;OS? Get the app from the Firefox Marketplace on your phone or tablet, and scan the following QR code to sign in quickly:</p>
+                  <div>
+                    <iframe hidden src="/integration/qrcode-encoder/"></iframe>
+                  </div>
                 </section>
               </section>
             </div><!-- end #settings-tabpanel-account -->
@@ -734,6 +736,21 @@
     <template id="person-with-image">
       <span role="link" itemscope itemtype="http://schema.org/Person" data-attrs="title"><img alt="" itemprop="image"><span itemprop="name"></span><meta itemprop="email"></span>
     </template><!-- end #person-with-image -->
+    <template id="qrcode-auth-overlay-template">
+      <section id="qrcode-auth-overlay" role="region">
+        <header>
+          <h2>Scan QR code</h2>
+        </header>
+        <p>Install BzDeck on your desktop and open the Settings. Tap on the capture image below to scan the code.</p>
+        <div>
+          <video>
+        </div>
+        <div>
+          <p><span role="button" data-id="cancel">Cancel</span></p>
+        </div>
+        <iframe hidden src="/integration/qrcode-decoder/"></iframe>
+      </section>
+    </template><!-- end #qrcode-auth-overlay-template -->
   </head>
   <body role="application">
     <section id="app-login">
@@ -742,11 +759,11 @@
       </header>
       <div>
         <div>
-          <p id="app-intro">BzDeck is a useful, experimental Bugzilla client demonstrating modern Web application technologies such as CSS3, DOM4, HTML5, ECMAScript 6 and WAI-ARIA. <a href="/about/">Learn more &raquo;</a></p>
-          <form aria-hidden="true">
-            <p>Sign in with your <strong>bugzilla.mozilla.org</strong> user name (email) and API key. BzDeck works in the read-only mode if your key is not provided. <a href="https://bugzilla.mozilla.org/userprefs.cgi?tab=apikey">Get a key &raquo;</a></p>
-            <p><input name="email" type="email" placeholder="User Name" required role="textbox" aria-label="User Name"><input name="apikey" type="text" maxlength="40" placeholder="API Key (optional)" pattern="^[A-Za-z0-9]{40}$" role="textbox" aria-label="API Key (optional)"><button role="button">Sign In</button></p>
-          </form>
+          <p id="app-intro">BzDeck is a useful, experimental Bugzilla client demonstrating modern Web application technologies such as CSS3, DOM4, HTML5, ECMAScript 6 and WAI-ARIA. BzDeck is currently optimized for the <strong>bugzilla.mozilla.org</strong> instance. <a href="/about/">Learn more &raquo;</a></p>
+          <div role="form" aria-hidden="true">
+            <p><span role="button" tabindex="0" data-id="bugzilla-auth">Sign in with Bugzilla</span></p>
+            <p><span role="button" tabindex="0" data-id="qrcode-auth">Sign in with QR code</span></p>
+          </div>
           <p role="status">This application requires <a href="https://www.mozilla.org/firefox/developer/">Firefox Developer Edition</a> or <a href="http://nightly.mozilla.org/">Firefox Nightly</a> with JavaScript enabled.</p>
         </div>
       </div>
